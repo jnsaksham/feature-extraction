@@ -1,3 +1,5 @@
+## Blocking and stft computation ##
+
 def block_audio(x,blockSize,hopSize,fs):
     
     # returns a matrix xb (dimension NumOfBlocks X blockSize) and a vector timeInSec (dimension NumOfBlocks) 
@@ -85,6 +87,9 @@ def plot_spectrogram(spectrogram, rate, hopSize):
     plt.ylabel('Freq (Hz)')
     plt.pcolormesh(t, f, spectrogram.T)
     plt.show()
+
+    
+## Features ##
     
 def extract_rms(xb):    
     # Returns an array (NumOfBlocks X k) of spectral flux for all the audio blocks: k = frequency bins
@@ -136,3 +141,20 @@ def extract_spectral_flux(xb):
     spectral_flux = np.array(spectral_flux)
 
     return spectral_flux
+
+
+## Wrapper functions ##
+
+def extract_features(x, blockSize, hopSize, fs):
+    
+    # Block audio
+    xb, timeInSec = block_audio(x, blockSize, hopSize, fs)
+    
+    # Extract features
+    spectral_centroid = np.array([])
+    rms = extract_rms(xb)
+    zcr = np.array([])
+    spectral_flux = extract_spectral_flux(xb)
+    spectral_crest = extract_spectral_crest(xb)
+    
+    return spectral_centroid, rms, zcr, spectral_flux, spectral_crest
