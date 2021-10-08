@@ -15,7 +15,6 @@ def block_audio(x,blockSize,hopSize,fs):
         if t>samples-blockSize and t<samples:
             block = np.append(x[t:], np.zeros(blockSize-len(x[t:])))
         
-        # Window the audio
         timeInSec = np.append(timeInSec, t/fs)
         xb.append(block)
         t += hopSize
