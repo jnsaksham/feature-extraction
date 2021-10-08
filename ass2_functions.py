@@ -9,12 +9,18 @@ def block_audio(x,blockSize,hopSize,fs):
     xb = []
     samples = len(x)
     
+    # Define window
+    w = np.hanning(blockSize)
+    w = w/np.sum(w)
+    
     while t < samples:#-blockSize:
         if t <= samples-blockSize:
             block = x[t:t+blockSize]
         if t>samples-blockSize and t<samples:
             block = np.append(x[t:], np.zeros(blockSize-len(x[t:])))
         
+        # Window the audio
+        block = block*w
         timeInSec = np.append(timeInSec, t/fs)
         xb.append(block)
         t += hopSize
