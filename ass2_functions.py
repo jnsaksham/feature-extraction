@@ -1,4 +1,4 @@
-def block_audio(x,blockSize,hopSize,fs, w):
+def block_audio(x,blockSize,hopSize,fs):
     
     # returns a matrix xb (dimension NumOfBlocks X blockSize) and a vector timeInSec (dimension NumOfBlocks) 
     # for blocking the input audio signal into overlapping blocks. 
@@ -16,8 +16,6 @@ def block_audio(x,blockSize,hopSize,fs, w):
             block = np.append(x[t:], np.zeros(blockSize-len(x[t:])))
         
         # Window the audio
-        w = w/np.sum(w)
-        block = block*w
         timeInSec = np.append(timeInSec, t/fs)
         xb.append(block)
         t += hopSize
