@@ -1,73 +1,66 @@
+## libraries ##
+
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy
+import scipy.io.wavfile as sp
+import glob, os
+import IPython.display as ipd
+import time
+import math
+
 ## Blocking and stft computation ##
 
-def block_audio(x,blockSize,hopSize,fs):
-    
-    # returns a matrix xb (dimension NumOfBlocks X blockSize) and a vector timeInSec (dimension NumOfBlocks) 
-    # for blocking the input audio signal into overlapping blocks. 
-    # timeInSec will refer to the start time of each block
-    
-    t = 0
-    timeInSec = np.array([])
-    xb = []
-    samples = len(x)
-    
-    # Define window
-    w = np.hanning(blockSize)
-    w = w/np.sum(w)
-    
-    while t < samples:#-blockSize:
-        if t <= samples-blockSize:
-            block = x[t:t+blockSize]
-        if t>samples-blockSize and t<samples:
-            block = np.append(x[t:], np.zeros(blockSize-len(x[t:])))
-        
-        # Window the audio
-        block = block*w
-        timeInSec = np.append(timeInSec, t/fs)
-        xb.append(block)
-        t += hopSize
-    xb = np.array(xb)
-    
-    return xb, timeInSec
+def  block_audio(x,blockSize,hopSize,fs):    
+    # allocate memory    
+    numBlocks = math.ceil(x.size / hopSize)    
+    xb = np.zeros([numBlocks, blockSize])    
+    # compute time stamps    
+    t = (np.arange(0, numBlocks) * hopSize) / fs    
+    x = np.concatenate((x, np.zeros(blockSize)),axis=0)    
+    for n in range(0, numBlocks):        
+        i_start = n * hopSize        
+        i_stop = np.min([x.size - 1, i_start + blockSize - 1])        
+        xb[n][np.arange(0,blockSize)] = x[np.arange(i_start, i_stop + 1)]    
+    return (xb,t)
 
 
 def fft_mag(x):
     # Analysis of a signal using the discrete Fourier transform
     # x: input signal, w: analysis window, N: FFT size 
     # returns spectrum of the block
-
+    
     # Size of positive side of fft
     blockSize = len(x)
-    relevant = (blockSize//2)+1                                   
-    h1 = (blockSize+1)//2                                     
-    h2 = blockSize//2                                         
-
+    
+    # Define window
+    w = np.hanning(blockSize)
+    w = w/np.sum(w)
+    
+    x = x*w
+    
+    relevant = (blockSize//2)+1
+    h1 = (blockSize+1)//2
+    h2 = blockSize//2
+    
     # Arrange audio to center the fft around zero
     x_arranged = np.zeros(blockSize)                         
     x_arranged[:h1] = x[h2:]                              
-    x_arranged[-h2:] = x[:h2]        
+    x_arranged[-h2:] = x[:h2]
     
-    # compute fft
-    X = scipy.fft(x_arranged)
+    # compute fft and keep the relevant part
+    X = np.fft.fft(x_arranged)[:relevant]
     
     # compute magnitude spectrum in dB
-    magX = abs(X[:relevant])                                 
-    magX = 20 * np.log10(magX)
+    magX = abs(X)
     
     return magX
-
 def compute_stft(xb):
     # Generate spectrogram
     # returns magnitude spectrogram
 
-#     if (H <= 0):                                   # raise error if hop size 0 or negative
-#         raise ValueError("Hop size (H) smaller or equal to 0")
-
     blockSize = xb.shape[1]
     hopSize = int(blockSize/2)
-    
-    h1 = (blockSize+1)//2
-    h2 = blockSize//2
     
     mag_spectrogram = []
     for block in xb:
@@ -88,23 +81,32 @@ def plot_spectrogram(spectrogram, rate, hopSize):
     plt.pcolormesh(t, f, spectrogram.T)
     plt.show()
 
+def plot_spectrogram(spectrogram, fs, hopSize):
+    
+    t = hopSize*np.arange(spectrogram.shape[0])/fs
+    f = np.arange(0,fs/2, fs/2/spectrogram.shape[1])
+
+    plt.figure(figsize = (15, 7))
+    plt.xlabel('Time (s)')
+    plt.ylabel('Freq (Hz)')
+    plt.pcolormesh(t, f, spectrogram.T)
+    plt.show()
     
 ## Features ##
     
 def extract_rms(xb):    
-    # Returns an array (NumOfBlocks X k) of spectral flux for all the audio blocks: k = frequency bins
     # xb is a matrix of blocked audio data (dimension NumOfBlocks X blockSize)
 
-    rms_dB = []
+    rms_array = np.array([])
     for block in xb:
         rms = np.sqrt(np.dot(block, block)/len(block))
         # Replace rms<-100dB with -100dB. -100dB = 10^(-5)
         if rms <= 10**(-5):
             rms = 10**(-5)
-        rms = 20*np.log10(rms)
-        rms_dB.append(rms)
-    rms_dB = np.array(rms_dB)
-    return rms_dB
+        rms_array = np.append(rms_array, rms)
+        
+    rms_array = 20*np.log10(rms_array)
+    return rms_array
 
 def extract_spectral_crest(xb):
     
@@ -141,20 +143,3 @@ def extract_spectral_flux(xb):
     spectral_flux = np.array(spectral_flux)
 
     return spectral_flux
-
-
-## Wrapper functions ##
-
-def extract_features(x, blockSize, hopSize, fs):
-    
-    # Block audio
-    xb, timeInSec = block_audio(x, blockSize, hopSize, fs)
-    
-    # Extract features
-    spectral_centroid = np.array([])
-    rms = extract_rms(xb)
-    zcr = np.array([])
-    spectral_flux = extract_spectral_flux(xb)
-    spectral_crest = extract_spectral_crest(xb)
-    
-    return spectral_centroid, rms, zcr, spectral_flux, spectral_crest
