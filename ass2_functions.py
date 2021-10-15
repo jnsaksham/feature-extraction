@@ -29,28 +29,21 @@ def fft_mag(x):
     # Analysis of a signal using the discrete Fourier transform
     # x: input signal, w: analysis window, N: FFT size 
     # returns spectrum of the block
-    
     # Size of positive side of fft
     blockSize = len(x)
-    
     # Define window
     w = np.hanning(blockSize)
     w = w/np.sum(w)
-    
     x = x*w
-    
     relevant = (blockSize//2)+1
     h1 = (blockSize+1)//2
     h2 = blockSize//2
-    
     # Arrange audio to center the fft around zero
     x_arranged = np.zeros(blockSize)                         
     x_arranged[:h1] = x[h2:]                              
     x_arranged[-h2:] = x[:h2]
-    
     # compute fft and keep the relevant part
     X = np.fft.fft(x_arranged)[:relevant]
-    
     # compute magnitude spectrum in dB
     magX = abs(X)
     
@@ -97,15 +90,13 @@ def plot_spectrogram(spectrogram, fs, hopSize):
 def extract_rms(xb):    
     # xb is a matrix of blocked audio data (dimension NumOfBlocks X blockSize)
 
-    rms_array = np.array([])
-    for block in xb:
+    rms_array = np.zeros(xb.shape[0])
+    for i, block in enumerate(xb):
         rms = np.sqrt(np.dot(block, block)/len(block))
         # Replace rms<-100dB with -100dB. -100dB = 10^(-5)
         if rms <= 10**(-5):
             rms = 10**(-5)
-        rms_array = np.append(rms_array, rms)
-        
-    rms_array = 20*np.log10(rms_array)
+        rms_array[i] = 20*np.log10(rms)
     return rms_array
 
 def extract_spectral_crest(xb):
@@ -113,10 +104,9 @@ def extract_spectral_crest(xb):
     # Calculate STFT
     X = compute_stft(xb)
     
-    spectral_crest = np.array([])
-    for frame in X:
-        crest_factor = np.max(abs(frame))/np.sum(abs(frame))
-        spectral_crest = np.append(spectral_crest, crest_factor)
+    spectral_crest = np.zeros(xb.shape[0])
+    for i, frame in enumerate(X):
+        spectral_crest[i] = np.max(abs(frame))/np.sum(abs(frame))
     
     return spectral_crest
 
@@ -131,7 +121,7 @@ def extract_spectral_flux(xb):
     n = 0
     k = 0
 
-    spectral_flux = []
+    spectral_flux = np.zeros(xb.shape[0])
 
     for n in np.arange(X.shape[0]-1):
         flux_frame = 0
@@ -139,7 +129,7 @@ def extract_spectral_flux(xb):
             flux = (abs(X[n+1, k]) - abs(X[n, k]))**2
             flux_frame += flux
         flux_frame = np.sqrt(flux_frame)/(xb.shape[1]//2+1)
-        spectral_flux.append(flux_frame)
+        spectral_flux[n] = flux_frame
     spectral_flux = np.array(spectral_flux)
 
     return spectral_flux
