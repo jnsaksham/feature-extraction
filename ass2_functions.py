@@ -138,7 +138,7 @@ def extract_spectral_flux(xb):
         for k in np.arange(X.shape[1]):
             flux = (abs(X[n+1, k]) - abs(X[n, k]))**2
             flux_frame += flux
-        flux_frame = np.sqrt(flux_frame)/(xb.shape[1]+1)
+        flux_frame = np.sqrt(flux_frame)/(xb.shape[1]//2+1)
         spectral_flux.append(flux_frame)
     spectral_flux = np.array(spectral_flux)
 
