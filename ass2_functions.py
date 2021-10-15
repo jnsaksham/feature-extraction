@@ -9,6 +9,10 @@ import IPython.display as ipd
 import time
 import math
 
+## Global variables
+blockSize = 1024
+hopSize = blockSize//4
+
 ## Blocking and stft computation ##
 
 def  block_audio(x,blockSize,hopSize,fs):    
@@ -159,11 +163,13 @@ def extract_zerocrossingrate(xb):
 
 def extract_features(x, blockSize, hopSize, fs):
     block, timeInSec = block_audio(x, blockSize, hopSize, fs)
-    Vsc = extract_spectral_centroid(block, fs)
-    Vzc = extract_zerocrossingrate(block)
-    features = np.vstack(Vsc, Vzc)
+    features = np.zeros((5, block.shape[0]))
+    features[0] = extract_spectral_centroid(block, fs)
+    features[1] = extract_rms(block)
+    features[2] = extract_zerocrossingrate(block)
+    features[3] = extract_spectral_crest(block)
+    features[4] = extract_spectral_flux(block)
     return features
-
 
 def aggregate_feature_per_file(features):
     feature_matrix = np.zeros(10)
@@ -172,11 +178,56 @@ def aggregate_feature_per_file(features):
         feature_matrix[n+5] = np.std(element)
     return feature_matrix
 
-
 def get_feature_data(path, blockSize, hopSize):
-    all_feature_matrix = np.zeros((0, 10))
-    folder = glob.glob(path + "\\*.wav")
+    folder = glob.glob(path + "*.wav")
+    all_feature_matrix = np.zeros((10, len(folder)))
+
     for count, wavFile in enumerate(folder):
+#         print (count)
         fs, x = scipy.io.wavfile.read(wavFile)
-        all_feature_matrix = np.vstack((all_feature_matrix, aggregate_feature_per_file(extract_features(x, blockSize, hopSize, fs))))
+        features = extract_features(x, blockSize, hopSize, fs)
+        feature_matrix = aggregate_feature_per_file(features)
+        all_feature_matrix[:, count] = feature_matrix
     return all_feature_matrix
+
+## Normalization ##
+
+# Z score of each column
+def normalize_zscore(featureData):
+    normFeatureMatrix = np.zeros((10, featureData.shape[1]))
+
+    for n, feature in enumerate(featureData):
+        mean = np.mean(feature)
+        stdev = np.std(feature)
+        for i, x in enumerate(feature):
+            x = (x-mean)/stdev
+            normFeatureMatrix[n, i] = x
+            
+    return normFeatureMatrix
+
+## Final function ##
+def visualize_features(path_to_musicspeech):
+    # Move to dataset folder
+    os.chdir(path_to_musicspeech)
+    
+    # Location for music and speech files
+    music_wav_files = path_to_musicspeech +'/music_wav/'
+    speech_wav_files = path_to_musicspeech +'/speech_wav/'
+    
+    # Extract features
+    music_features = get_feature_data(music_wav_files, blockSize, hopSize)
+    speech_features = get_feature_data(speech_wav_files, blockSize, hopSize)
+    
+    num_music_files = music_features.shape[1]
+    num_speech_files = speech_features.shape[1]
+
+    # Concatenate the datasets
+    dataset_features = np.zeros((music_features.shape[0], num_music_files + num_speech_files))
+    dataset_features.shape
+    
+    dataset_features[:, :num_music_files] = music_features
+    dataset_features[:, num_music_files:] = speech_features
+    
+    normFeatureMatrix = normalize_zscore(dataset_features)
+    
+    return normFeatureMatrix
