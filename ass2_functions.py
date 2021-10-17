@@ -12,6 +12,8 @@ import math
 ## Global variables
 blockSize = 1024
 hopSize = blockSize//4
+folder_name = 'music_speech/'
+path_to_musicspeech = os.getcwd() + '/' + folder_name
 
 ## Blocking and stft computation ##
 
@@ -207,27 +209,96 @@ def normalize_zscore(featureData):
 
 ## Final function ##
 def visualize_features(path_to_musicspeech):
+    blockSize = 1024
+    hopSize = 256
+
     # Move to dataset folder
     os.chdir(path_to_musicspeech)
-    
+
     # Location for music and speech files
-    music_wav_files = path_to_musicspeech +'/music_wav/'
-    speech_wav_files = path_to_musicspeech +'/speech_wav/'
-    
+    music_wav_files = path_to_musicspeech + '/music_wav/'
+    speech_wav_files = path_to_musicspeech + '/speech_wav/'
+
     # Extract features
     music_features = get_feature_data(music_wav_files, blockSize, hopSize)
     speech_features = get_feature_data(speech_wav_files, blockSize, hopSize)
-    
+
     num_music_files = music_features.shape[1]
     num_speech_files = speech_features.shape[1]
 
     # Concatenate the datasets
     dataset_features = np.zeros((music_features.shape[0], num_music_files + num_speech_files))
     dataset_features.shape
-    
+
     dataset_features[:, :num_music_files] = music_features
     dataset_features[:, num_music_files:] = speech_features
-    
+
     normFeatureMatrix = normalize_zscore(dataset_features)
-    
+
+    SC_mean = normFeatureMatrix[0, :]
+    SCR_mean = normFeatureMatrix[3, :]
+
+    SF_mean = normFeatureMatrix[4, :]
+    ZCR_mean = normFeatureMatrix[2, :]
+
+    RMS_mean = normFeatureMatrix[1, :]
+    RMS_std = normFeatureMatrix[6, :]
+
+    ZCR_std = normFeatureMatrix[7, :]
+    SCR_std = normFeatureMatrix[8, :]
+
+    SC_std = normFeatureMatrix[5, :]
+    SF_std = normFeatureMatrix[9, :]
+
+    plt.figure(figsize = (16, 24))
+
+    plt.subplot(3, 2, 1)
+    plt.title("SC mean vs SCR mean")
+    plt.xlabel("SC mean")
+    plt.ylabel("SCR mean")
+    data1 = (SC_mean, SCR_mean)
+    mus1 = plt.scatter(data1[0][:num_music_files], data1[1][:num_music_files], color='red')
+    sp1 = plt.scatter(data1[0][num_music_files:], data1[1][num_music_files:], color='blue')
+    plt.legend((mus1, sp1), ('Music', 'Speech'))
+
+    plt.subplot(3, 2, 2)
+    plt.title("SF mean vs ZCR mean")
+    plt.xlabel("SF mean")
+    plt.ylabel("ZCR mean")
+    data2 = (SF_mean, ZCR_mean)
+    mus2 = plt.scatter(data2[0][:num_music_files], data2[1][:num_music_files], color='red')
+    sp2 = plt.scatter(data2[0][num_music_files:], data2[1][num_music_files:], color='blue')
+    plt.legend((mus2, sp2), ('Music', 'Speech'))
+
+    plt.subplot(3, 2, 3)
+    plt.title("RMS mean vs RMS std")
+    plt.xlabel("RMS mean")
+    plt.ylabel("RMS std")
+    data3 = (RMS_mean, RMS_std)
+    mus3 = plt.scatter(data3[0][:num_music_files], data3[1][:num_music_files], color='red')
+    sp3 = plt.scatter(data3[0][num_music_files:], data3[1][num_music_files:], color='blue')
+    plt.legend((mus3, sp3), ('Music', 'Speech'))
+
+    plt.subplot(3, 2, 4)
+    plt.title("ZCR std vs SCR std")
+    plt.xlabel("ZCR std")
+    plt.ylabel("SCR std")
+    data4 = (ZCR_std, SCR_std)
+    mus4 = plt.scatter(data4[0][:num_music_files], data4[1][:num_music_files], color='red')
+    sp4 = plt.scatter(data4[0][num_music_files:], data4[1][num_music_files:], color='blue')
+    plt.legend((mus4, sp4), ('Music', 'Speech'))
+
+    plt.subplot(3, 2, 5)
+    plt.title("SC std vs SF std")
+    plt.xlabel("SC std")
+    plt.ylabel("SF std")
+    data5 = (SC_std, SF_std)
+    mus5 = plt.scatter(data5[0][:num_music_files], data5[1][:num_music_files], color='red')
+    sp5 = plt.scatter(data5[0][num_music_files:], data5[1][num_music_files:], color='blue')
+    plt.legend((mus5, sp5), ('Music', 'Speech'))
+
+    plt.show()
     return normFeatureMatrix
+
+## Script
+norm_features_dataset = visualize_features(path_to_musicspeech)
